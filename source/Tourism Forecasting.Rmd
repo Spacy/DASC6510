@@ -32,9 +32,24 @@ head(tsibble_data)
 # convert to tsibble
 series.names = tsibble_data |> as_tibble() |> select(series_name) |> distinct()
 series.names = series.names$series_name
+
+# number of series
+length(series.names)
+
 tsibble_data = tsibble_data |> 
   mutate(month = yearmonth(start_timestamp)) |> 
-  as_tsibble(index = month)
+  update_tsibble(index = month)
+
+# date ranges
+min(tsibble_data$month)
+max(tsibble_data$month)
+
+# length ranges
+series.length = tsibble_data |> as_tibble() |> 
+  group_by(series_name) |> summarise(length = n())
+min(series.length$length)
+max(series.length$length)
+mean(series.length$length)
 
 # forecast
 forecast.single = function (series) {
@@ -81,8 +96,7 @@ forecast.single = function (series) {
 
 ## forecast all
 accu.all.series = NULL
-#for (series_name in series.names) {
-for (series_name in c('T1', 'T2')) {
+for (series_name in series.names) {
   if (is.null(accu.all.series)) {
     accu.all.series = forecast.single(series_name)
   } else {
@@ -94,7 +108,7 @@ for (series_name in c('T1', 'T2')) {
 ## Forecast accuracy and model rank
 
 ```{r accuracy}
-#save(accu.all.series, file = 'accu.all.series.RObject')
+#save(accu.all.series, file = 'accu2.all.series.RObject')
 
 accu.summarise = accu.all.series |> group_by(.model, h) |> 
   summarise(RMSE = mean(RMSE), MAE = mean(MAE), MAPE=mean(MAPE))
@@ -108,11 +122,11 @@ accu.with.best.model = accu.summarise |> filter(
 )
 
 accu.with.best.model$.model[accu.with.best.model$.model=='arima'] = 'ARIMA'
-accu.with.best.model$.model[accu.with.best.model$.model=='ets'] = 'EWMA'
+accu.with.best.model$.model[accu.with.best.model$.model=='ets'] = 'ETS'
 accu.with.best.model$.model[accu.with.best.model$.model=='snaive'] = 'SNaive'
 accu.with.best.model$.model[accu.with.best.model$.model=='nnar'] = 'NNAR'
 
-# compare ARIMA EWMA SNaive and NNAR
+# compare ARIMA ETS SNaive and NNAR
 ggplot(accu.with.best.model, mapping = aes(x = as.factor(h), y = MAPE)) + 
   geom_bar(aes(fill = .model), stat = 'identity', position = 'dodge') +
   labs(x = 'h', fill = 'Model') +
@@ -130,7 +144,7 @@ tibble(mapes |> select(.model), rank = model.rank)
 # T1 ETS and ARIMA model
 
 ```{r T1 model}
-# check EWMA parameter on T1 series
+# check ETS parameter on T1 series
 T1 = tsibble_data |> filter(series_name == 'T1')
 nb.all = nrow(T1)
 nb.test = 24
