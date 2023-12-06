@@ -11,6 +11,13 @@ forecast_horizon <- loaded_data[[3]]
 contain_missing_values <- loaded_data[[4]]
 contain_equal_length <- loaded_data[[5]]
 
+#T1 data
+t1_data <- tsibble_data |> filter(series_name=="T1")
+t1_data |> autoplot() + labs(y="visitors")
+
+t1_data |> gg_season() +labs(y="visitors")
+t1_data |> gg_subseries() +labs(y="visitors")
+
 head(tsibble_data)
 series.names = tsibble_data |> as_tibble() |> select(series_name) |> distinct()
 series.names = series.names$series_name
